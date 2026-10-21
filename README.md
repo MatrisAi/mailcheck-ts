@@ -19,9 +19,65 @@ and `AbortSignal.timeout`.
 MIT licensed. Built on mailcheck, public disposable-domain and TLD lists and
 the DNS-over-HTTPS services named in [Acknowledgements](#acknowledgements).
 
+## Install
+
 ```sh
+npm install mailcheck-ts
+# or
 pnpm add mailcheck-ts
+# or
+yarn add mailcheck-ts
+# or
+bun add mailcheck-ts
+# Deno
+deno add npm:mailcheck-ts
 ```
+
+Straight in a browser, with no build step:
+
+```html
+<script type="module">
+  import { suggest } from "https://esm.sh/mailcheck-ts@0.1/suggest";
+  console.log(suggest("ana@gmial.com")?.address); // "ana@gmail.com"
+</script>
+```
+
+Pin the version you tested (`mailcheck-ts@0.1.0`) in production.
+
+## Quick start
+
+A "Did you mean" hint on an email field, without blocking the person:
+
+```ts
+import { suggest } from "mailcheck-ts/suggest";
+
+const input = document.querySelector<HTMLInputElement>("#email")!;
+const hint = document.querySelector<HTMLElement>("#email-hint")!;
+
+input.addEventListener("blur", () => {
+  const fix = suggest(input.value);
+  hint.textContent = fix ? `Did you mean ${fix.address}?` : "";
+  hint.onclick = fix ? () => { input.value = fix.address; hint.textContent = ""; } : null;
+});
+```
+
+On the server, refuse only what DNS proves cannot receive mail, and decide
+yourself about disposable inboxes:
+
+```ts
+import { checkEmail } from "mailcheck-ts/check";
+
+const result = await checkEmail(email, { allowDisposable: false });
+if (result.verdict === "invalid") {
+  // not an email address at all
+} else if (result.verdict === "undeliverable" || result.verdict === "disposable") {
+  // answer 400 with result.suggestion?.address when there is one
+}
+// "allow" also covers a DNS lookup that did not answer in time
+// (result.mx.kind === "unknown"): never refuse on that.
+```
+
+## Overview
 
 | | `suggest` | `checkMx` | `isDisposable` |
 |---|---|---|---|
