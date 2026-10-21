@@ -1,5 +1,10 @@
 # mailcheck-ts
 
+[![npm version](https://img.shields.io/npm/v/mailcheck-ts)](https://www.npmjs.com/package/mailcheck-ts)
+[![CI](https://github.com/MatrisAi/mailcheck-ts/actions/workflows/ci.yml/badge.svg)](https://github.com/MatrisAi/mailcheck-ts/actions/workflows/ci.yml)
+[![license: MIT](https://img.shields.io/npm/l/mailcheck-ts)](https://opensource.org/license/mit)
+[![minzipped size](https://img.shields.io/bundlephobia/minzip/mailcheck-ts)](https://bundlephobia.com/package/mailcheck-ts)
+
 Catch mistyped, disposable and undeliverable email addresses **without ever
 refusing a real one**.
 
@@ -33,16 +38,80 @@ bun add mailcheck-ts
 deno add npm:mailcheck-ts
 ```
 
-Straight in a browser, with no build step:
+Straight in a browser, with no build step: see [From a CDN](#from-a-cdn).
+
+## From a CDN
+
+Every version on npm is served by jsDelivr, unpkg and esm.sh. In production,
+**pin the exact version you tested** (`mailcheck-ts@0.1.1`, not `@0.1` or
+no version): a range follows new releases into your page without review.
+
+### As a module
 
 ```html
 <script type="module">
-  import { suggest } from "https://esm.sh/mailcheck-ts@0.1/suggest";
+  // jsDelivr, the published files as they are:
+  import { suggest } from "https://cdn.jsdelivr.net/npm/mailcheck-ts@0.1.1/dist/suggest.js";
+  // or unpkg, the same files:
+  // import { suggest } from "https://unpkg.com/mailcheck-ts@0.1.1/dist/suggest.js";
+  // or esm.sh, by entry point (`/suggest`, `/mx`, `/check`, ...):
+  // import { suggest } from "https://esm.sh/mailcheck-ts@0.1.1/suggest";
   console.log(suggest("ana@gmial.com")?.address); // "ana@gmail.com"
 </script>
 ```
 
-Pin the version you tested (`mailcheck-ts@0.1.0`) in production.
+### As a classic script (migrating from mailcheck)
+
+`dist/mailcheck.global.js` is one minified file (about 21 KB, 9 KB gzipped)
+for pages that load mailcheck with `<script src>`. It defines a single
+global, `window.MailcheckTs`, with `suggest`, `suggestDomain`, `checkMx`,
+`isDefinitivelyUndeliverable`, mailcheck's `run`, and the whole
+mailcheck-compatible `Mailcheck` object. It leaves out the disposable-domain
+list (about 150 KB) to stay small; import `mailcheck-ts/disposable` as a
+module when you need it.
+
+```html
+<script
+  src="https://cdn.jsdelivr.net/npm/mailcheck-ts@0.1.1/dist/mailcheck.global.js"
+  integrity="sha384-PASTE_THE_HASH_HERE"
+  crossorigin="anonymous"></script>
+<script>
+  var input = document.getElementById("email");
+  var hint = document.getElementById("email-hint");
+  input.addEventListener("blur", function () {
+    // mailcheck's own call, unchanged apart from the global's name:
+    MailcheckTs.run({
+      email: input.value,
+      suggested: function (s) { hint.textContent = "Did you mean " + s.full + "?"; },
+      empty: function () { hint.textContent = ""; },
+    });
+  });
+  // Existing code that calls `Mailcheck.run(...)` keeps working with:
+  // var Mailcheck = MailcheckTs.Mailcheck;
+</script>
+```
+
+The same file is at
+`https://unpkg.com/mailcheck-ts@0.1.1/dist/mailcheck.global.js`. mailcheck's
+jQuery plugin (`$(el).mailcheck(...)`) is not included; call `run` from your
+own handler as above.
+
+### Subresource Integrity
+
+`integrity` makes the browser refuse the file if the CDN ever serves
+different bytes. Compute the hash of the exact version you pin, once, and
+paste it in as `sha384-<hash>`:
+
+```sh
+curl -s https://cdn.jsdelivr.net/npm/mailcheck-ts@0.1.1/dist/mailcheck.global.js | openssl dgst -sha384 -binary | openssl base64 -A
+```
+
+The hash is of the published file, so it is the same from jsDelivr and
+unpkg. Use it with an exact version only: a range resolves to new bytes and
+the browser then refuses the script. SRI fits the single-file classic
+script best. A module's `integrity` covers that one file, not the modules it
+imports, and esm.sh generates its responses, so they are not guaranteed to
+stay byte-identical.
 
 ## Quick start
 
@@ -360,21 +429,32 @@ A published version is permanent, so the pack is checked, not trusted.
 
 - `files` in package.json is an ALLOWLIST (`dist/**/*.js`, `dist/**/*.d.ts`,
   README, LICENSE, NOTICE), never an ignore file.
-- `pnpm run build` deletes `dist/` and compiles with `tsconfig.build.json`:
-  no source maps, no declaration maps, no inlined sources.
+- `pnpm run build` deletes `dist/`, compiles with `tsconfig.build.json` and
+  bundles `dist/mailcheck.global.js` with rolldown: no source maps, no
+  declaration maps, no inlined sources.
 - `pnpm run pack-check` packs for real, opens the tarball and fails unless
   the file list equals the exact allowlist, no file is a source map, a
   TypeScript source, a test, a script, a fixture, a dotfile, an env file, a
   key or an archive, no file contains source map material, a private name or
   host, an object-storage URL, an absolute local path or anything shaped like
   a secret, and the size is under the caps. `prepublishOnly` runs the build
-  and `pack-check`, so a publish cannot skip them.
-- Publish only from this repository's release workflow
-  (`.github/workflows/release.yml`, run by publishing a GitHub release or
-  pushing a `v*` tag), with npm trusted publishing (OIDC, no token stored
-  anywhere) and provenance (`publishConfig.provenance`), 2FA on the npm
-  account, never from a developer machine with local build artifacts. Paste
-  the `pack-check` output into the release PR and review it.
+  and `pack-check`, so a publish (staged or not) cannot skip them.
+- Releases go through npm **staged publishing**, never straight to the
+  registry, and never from a developer machine:
+  1. A GitHub release is published for the tag `vX.Y.Z`, which must equal
+     `version` in package.json.
+  2. The release workflow (`.github/workflows/release.yml`, environment
+     `npm`) runs the whole gate (tests, typecheck, build, `pack-check`) and
+     then `pnpm stage publish`. It authenticates with npm trusted publishing
+     (OIDC: no npm token exists anywhere) and attaches a provenance
+     attestation. The trusted publisher on npmjs.com may only stage: it
+     cannot publish directly or change dist-tags.
+  3. The staged version is not installable yet. A maintainer reviews it on
+     npmjs.com (the package's **Staged Packages** tab: files, size,
+     provenance) and approves it with 2FA (a passkey). Only then is it
+     published. Anything wrong is rejected there instead.
+
+  Paste the workflow's `pack-check` output into the release PR and review it.
 
 ## Acknowledgements
 

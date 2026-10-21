@@ -26,9 +26,11 @@ export const EXPECTED_PACK_FILES = [
   ...["check", "disposable", "disposable-list", "disposable-policy", "distance", "index", "mailcheck-compat", "mx", "providers", "suggest", "tlds"].flatMap(
     (name) => [`dist/${name}.d.ts`, `dist/${name}.js`],
   ),
+  // The classic-script bundle (scripts/bundle-global.mjs); JavaScript only.
+  "dist/mailcheck.global.js",
 ].sort();
 
-/** Size caps: the disposable list is ~145 KB of text, about 90 KB packed in total; anything far past that is an accident. */
+/** Size caps: the disposable list is ~150 KB of text and the global bundle ~21 KB, about 100 KB packed in total; anything far past that is an accident. */
 export const MAX_PACKED_BYTES = 150_000;
 export const MAX_UNPACKED_BYTES = 400_000;
 
@@ -82,9 +84,11 @@ const REPO = `https://github\\.com/${ORIGIN}Ai/mailcheck-ts`;
 
 /**
  * Lines allowed to name the origin, and only in these files: the copyright
- * holder in LICENSE and NOTICE, and the author, homepage, repository and bugs
- * fields of package.json, each matched as a whole line (as written in the
- * source, and as pnpm writes the manifest into the tarball).
+ * holder in LICENSE and NOTICE, the author, homepage, repository and bugs
+ * fields of package.json, and the CI status badge at the top of README.md
+ * (it can only point at this repository's own workflow), each matched as a
+ * whole line (as written in the source, and as pnpm writes the manifest into
+ * the tarball).
  */
 const ALLOWED_LINES = [
   { file: /^(LICENSE|NOTICE)$/, line: new RegExp(`^Copyright \\(c\\) \\d{4}(-\\d{4})? ${ORIGIN}AI\\.?( MIT License \\(see LICENSE\\)\\.)?$`, "i") },
@@ -92,6 +96,10 @@ const ALLOWED_LINES = [
   { file: /^package\.json$/, line: new RegExp(`^"homepage": "${REPO}#readme",?$`, "i") },
   { file: /^package\.json$/, line: new RegExp(`^"url": "git\\+${REPO}\\.git",?$`, "i") },
   { file: /^package\.json$/, line: new RegExp(`^"url": "${REPO}/issues",?$`, "i") },
+  {
+    file: /^README\.md$/,
+    line: new RegExp(`^\\[!\\[CI\\]\\(${REPO}/actions/workflows/ci\\.yml/badge\\.svg\\)\\]\\(${REPO}/actions/workflows/ci\\.yml\\)$`, "i"),
+  },
 ];
 
 /**

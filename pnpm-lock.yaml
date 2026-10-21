@@ -172,6 +172,9 @@ importers:
       jiti:
         specifier: 2.7.0
         version: 2.7.0
+      rolldown:
+        specifier: 1.2.14
+        version: 1.2.14
       typescript:
         specifier: 7.0.2
         version: 7.0.2

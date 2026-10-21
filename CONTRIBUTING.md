@@ -37,21 +37,43 @@ the README.
 
 ## Releasing
 
-**Never publish from your machine.** A version is published only by
-`.github/workflows/release.yml` (npm trusted publishing over OIDC, with
-provenance), started by publishing a GitHub release for a tag `vX.Y.Z` that
-matches `version` in package.json:
+**Never publish from your machine, and never publish directly.** A version
+reaches npm only through staged publishing: `.github/workflows/release.yml`
+STAGES it (npm trusted publishing over OIDC, with provenance), and a
+maintainer approves the staged version on npmjs.com with 2FA. The workflow
+starts when a GitHub release is published for a tag `vX.Y.Z` that matches
+`version` in package.json:
 
-1. Bump `version` in package.json and add the entry to CHANGELOG.md.
-2. Merge, then create the tag and the GitHub release.
-3. Check the workflow's `pack-check` output and the provenance on the
-   registry page.
+1. Bump `version` in package.json and add the entry to CHANGELOG.md, in a
+   pull request. Paste the `pack-check` output into it.
+2. Merge, then create and publish the GitHub release `vX.Y.Z` (it creates
+   the tag).
+3. The workflow runs in the `npm` environment (approve the deployment if
+   the environment has required reviewers), runs the full gate (tests,
+   typecheck, build, `pack-check`) and runs `pnpm stage publish`. A version
+   already published is skipped; one already staged is reported as nothing
+   to do.
+4. On npmjs.com, open the package, tab **Staged Packages**, check the
+   staged version (files, size, provenance), then **Approve** it with your
+   passkey. Only now is it installable. Reject it there instead if anything
+   is wrong; the version number stays usable for a fixed re-stage.
+5. Check the provenance badge on the package's version page.
+
+The repository must be public when the workflow runs: npm generates and
+accepts provenance only for a public repository.
+
+### Trusted publisher settings (npmjs.com)
+
+Package settings > Trusted publishing > GitHub Actions: this repository's
+owner and name, workflow file `release.yml`, environment `npm`, allowed
+action **"npm stage publish" only** (no direct `npm publish`, no
+`npm dist-tag`). Publishing access: require 2FA and disallow tokens. With
+these, a compromised workflow or repository can at most stage a version,
+which nobody installs until a maintainer approves it.
 
 ### First release
 
 npm offers trusted publishing settings only for a package that already
-exists. The maintainer bootstraps `0.1.0` once, then, on npmjs.com, opens the
-package settings, adds a GitHub Actions trusted publisher (this repository,
-workflow `release.yml`, environment `npm`), sets publishing access to
-require 2FA and disallow tokens, and revokes any token used for the
-bootstrap. Every later version goes through the workflow only.
+exists. The maintainer bootstrapped `0.1.0` once, then configured the
+trusted publisher above and revoked any token used for the bootstrap.
+Every later version goes through the workflow and an approval only.

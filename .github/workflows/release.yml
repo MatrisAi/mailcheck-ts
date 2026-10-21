@@ -1,34 +1,44 @@
-# Publishes to the npm registry with npm trusted publishing (OIDC): no npm
-# token exists anywhere, in this repository or its secrets. GitHub mints a
-# short-lived identity token for this job (`id-token: write`) and the
-# registry exchanges it for a one-time publish credential, then records a
-# provenance attestation that links the version to this commit and workflow.
+# STAGES a version on the npm registry; it never publishes one. A maintainer
+# then approves the staged version on npmjs.com (the package's "Staged
+# Packages" tab) with 2FA, and only that approval makes it installable.
 #
-# One-time setup on npmjs.com, before the first release (see CONTRIBUTING.md):
-# package settings > Trusted publishing > GitHub Actions, with this
-# repository's owner and name, workflow file `release.yml` and environment
-# `npm`. The registry refuses a publish from any other repository, workflow
-# file or environment. The registry offers these settings only once the
-# package exists, so the very first version needs a one-off bootstrap
-# (CONTRIBUTING.md, "First release").
+# Authentication is npm trusted publishing (OIDC): no npm token exists
+# anywhere, in this repository or its secrets. GitHub mints a short-lived
+# identity token for this job (`id-token: write`); pnpm exchanges it with the
+# registry for a one-time credential and attaches a provenance attestation
+# that links the version to this commit and workflow. pnpm 12 does this for
+# `pnpm stage publish` exactly as for `pnpm publish` (same pipeline, staging
+# endpoint), so no npm CLI is needed.
+#
+# Setup on npmjs.com (see CONTRIBUTING.md, "Releasing"): package settings >
+# Trusted publishing > GitHub Actions, with this repository's owner and name,
+# workflow file `release.yml`, environment `npm`, and the allowed action
+# "npm stage publish" ONLY (no direct publish, no dist-tag). The registry
+# refuses anything else from this workflow, and anything at all from any
+# other repository, workflow file or environment.
+#
+# Provenance is generated only for a PUBLIC repository: the registry refuses
+# a provenance attestation from a private one, so the repository must be
+# public before a release runs.
 name: Release
 
+# Only a published GitHub release starts a run. A release created together
+# with its tag would otherwise also fire a tag push, and the second run could
+# not see the first one's staged version (staged versions are private; the
+# job's OIDC credential can stage but cannot list them).
 on:
   release:
     types: [published]
-  push:
-    tags: ["v*"]
 
 permissions:
   contents: read
 
-# A release created together with its tag fires both events; one run per tag.
 concurrency:
-  group: release-${{ github.event.release.tag_name || github.ref_name }}
+  group: release-${{ github.event.release.tag_name }}
   cancel-in-progress: false
 
 jobs:
-  publish:
+  stage:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: npm
@@ -51,7 +61,7 @@ jobs:
       - name: Tag matches package.json version
         id: version
         env:
-          TAG: ${{ github.event.release.tag_name || github.ref_name }}
+          TAG: ${{ github.event.release.tag_name }}
         run: |
           version="$(node -p 'require("./package.json").version')"
           if [ "$TAG" != "v$version" ]; then
@@ -60,7 +70,12 @@ jobs:
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      - name: Skip a version already on the registry
+      # A published version is public, so it is checked here. A STAGED one is
+      # private and cannot be listed with this job's credential; the registry
+      # refuses to stage a version that already exists (published or staged
+      # share one version index), and the stage step below reports that
+      # refusal as "nothing to do".
+      - name: Skip a version already published
         id: published
         env:
           VERSION: ${{ steps.version.outputs.version }}
@@ -80,7 +95,30 @@ jobs:
         run: pnpm run build
       - if: steps.published.outputs.exists == 'false'
         run: pnpm run pack-check
+
       # prepublishOnly rebuilds and re-runs pack-check, so the tarball that is
-      # uploaded is the one that was checked.
-      - if: steps.published.outputs.exists == 'false'
-        run: pnpm publish --provenance --access public --no-git-checks
+      # staged is the one that was checked. `--provenance` is explicit: a run
+      # that cannot attest fails instead of staging an unattested version.
+      # `--no-git-checks`: a release checks out its tag, a detached HEAD.
+      - name: Stage on npm (approve on npmjs.com afterwards)
+        if: steps.published.outputs.exists == 'false'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set +e
+          pnpm stage publish --provenance --access public --no-git-checks 2>&1 | tee stage.log
+          status="${PIPESTATUS[0]}"
+          set -e
+          if [ "$status" -ne 0 ]; then
+            if grep -Eqi 'E409|409 Conflict|cannot publish over|previously published|already (been )?(staged|published|exists)' stage.log; then
+              echo "::notice::mailcheck-ts@$VERSION is already staged or published; nothing to do."
+              exit 0
+            fi
+            exit "$status"
+          fi
+          {
+            echo "### mailcheck-ts@$VERSION is staged"
+            echo
+            echo "It is NOT installable yet. Approve it with 2FA on npmjs.com:"
+            echo "https://www.npmjs.com/package/mailcheck-ts, tab \"Staged Packages\"."
+          } >> "$GITHUB_STEP_SUMMARY"
