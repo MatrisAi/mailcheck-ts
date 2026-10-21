@@ -64,6 +64,17 @@ describe("pack-check rules", () => {
     expect(scanText("package.json", others.join("\n"))).toHaveLength(others.length);
   });
 
+  it("allows the CI badge of this repository in README.md only", () => {
+    const repo = `https://github.com/${word("Mat", "risAi")}/mailcheck-ts`;
+    const badge = `[![CI](${repo}/actions/workflows/ci.yml/badge.svg)](${repo}/actions/workflows/ci.yml)`;
+    expect(scanText("README.md", badge)).toEqual([]);
+    expect(scanText("dist/index.js", badge)).toHaveLength(1);
+    // Anything else on the line, or another repository, stays a finding.
+    expect(scanText("README.md", `${badge} see ${repo}/issues`)).toHaveLength(1);
+    const other = `https://github.com/${word("Mat", "risAi")}/other-repo`;
+    expect(scanText("README.md", `[![CI](${other}/actions/workflows/ci.yml/badge.svg)](${other}/actions/workflows/ci.yml)`)).toHaveLength(1);
+  });
+
   it("passes clean library code", () => {
     expect(scanText("dist/suggest.js", 'export function suggest(email) { return email.split("@"); }')).toEqual([]);
   });

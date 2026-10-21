@@ -32,5 +32,7 @@
     "newLine": "lf"
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.test.ts"]
+  // src/global.ts is the classic-script bundle's entry (scripts/build.mjs):
+  // it ships only inside dist/mailcheck.global.js.
+  "exclude": ["src/**/*.test.ts", "src/global.ts"]
 }

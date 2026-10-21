@@ -1,6 +1,6 @@
 {
   "name": "mailcheck-ts",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "license": "MIT",
   "description": "Catch mistyped, disposable and undeliverable email addresses without ever refusing a real one: an offline typo suggester (a mailcheck drop-in), a disposable-domain check and a DNS-over-HTTPS MX check that refuses only on definitive DNS answers. Zero runtime dependencies; browsers, Node 18+, Deno, Bun, Workers and edge runtimes.",
@@ -23,6 +23,8 @@
     "url": "https://github.com/MatrisAi/mailcheck-ts/issues"
   },
   "sideEffects": false,
+  "jsdelivr": "./dist/mailcheck.global.js",
+  "unpkg": "./dist/mailcheck.global.js",
   "exports": {
     ".": "./src/index.ts",
     "./suggest": "./src/suggest.ts",
@@ -91,6 +93,7 @@
   "devDependencies": {
     "@types/node": "22.20.5",
     "jiti": "2.7.0",
+    "rolldown": "1.2.14",
     "typescript": "7.0.2",
     "vitest": "5.0.3"
   },
