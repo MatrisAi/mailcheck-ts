@@ -1,0 +1,28 @@
+{
+  // The typecheck config (`pnpm run typecheck`), self-contained: the strict
+  // policy is written here in full, and no flag below may be switched off.
+  // tsconfig.build.json repeats the same policy for the publish build.
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noUncheckedSideEffectImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    // DOM for `fetch`, `AbortSignal` and `Response`, which every runtime this
+    // runs in (browsers, Workers, Node 18+) provides with the same shape; node
+    // only for the tests' own imports.
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true
+  },
+  "include": ["src/**/*"]
+}

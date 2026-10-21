@@ -1,0 +1,105 @@
+mailcheck-ts
+Copyright (c) 2026 MatrisAI. MIT License (see LICENSE).
+
+This package adapts, vendors or studied the works below. For each, what was
+taken is stated; anything not listed was written for this package. Every
+seeded domain was re-checked against live DNS before it was kept
+(scripts/verify-domains.mjs). The notices follow, as their licenses ask.
+
+==============================================================================
+mailcheck
+https://github.com/mailcheck/mailcheck
+Author: Derrick Ko (@derrickko); Received Inc; the mailcheck maintainers.
+
+ADAPTED: the public API shape (run, suggest, findClosestDomain, splitEmail,
+encodeEmail, sift4Distance, the default lists and thresholds, the result
+{ address, domain, full }); the 2.0 suggestion algorithm, ported to typed
+TypeScript in src/mailcheck-compat.ts for callers that pass their own lists;
+the Sift4 implementation; the default domain lists (merged into
+src/providers.ts after a live re-check); the correctness test suite (ported
+in src/mailcheck-compat.test.ts).
+
+The MIT License (MIT)
+Copyright (c) 2012 Received Inc, http://kicksend.com
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+==============================================================================
+Sift4 string distance
+Siderite Zackwehdex, 2014,
+https://siderite.blogspot.com/2014/11/super-fast-and-accurate-string-distance.html
+
+ADAPTED: through mailcheck (above), whose implementation was ported.
+
+==============================================================================
+email-misspelled
+https://github.com/julien-amblard/email-misspelled
+
+ADAPTED: the per-country Yahoo, Hotmail, Outlook and Live domain lists, used
+as seeds; each was re-verified live and several were dropped.
+
+MIT License
+Copyright (c) 2019 Julien Amblard
+
+(Permission notice identical to the MIT License text above.)
+
+==============================================================================
+@zootools/email-spell-checker
+https://github.com/ZooTools/email-spell-checker
+
+STUDIED ONLY: its TypeScript port of mailcheck and its provider list, used to
+cross-check ours. No code or data was copied.
+
+MIT License
+Copyright (c) 2022-current ZooTools, Inc.
+
+==============================================================================
+disposable-email-domains
+https://github.com/disposable-email-domains/disposable-email-domains
+Thanks to its contributors.
+
+VENDORED: disposable_email_blocklist.conf, normalised, deduplicated and
+sorted into src/disposable-list.ts by scripts/update-disposable.mjs.
+
+CC0 1.0 Universal (CC0 1.0) Public Domain Dedication.
+https://creativecommons.org/publicdomain/zero/1.0/
+
+==============================================================================
+IANA root zone database
+https://data.iana.org/TLD/tlds-alpha-by-domain.txt
+
+VENDORED: the list of top-level domains, as src/tlds.ts, by
+scripts/update-tlds.mjs. Public data.
+
+==============================================================================
+Cloudflare 1.1.1.1 DNS over HTTPS (JSON) and Google Public DNS (JSON API)
+https://developers.cloudflare.com/1.1.1.1/encryption/dns-over-https/make-api-requests/dns-json/
+https://developers.google.com/speed/public-dns/docs/doh/json
+
+USED: the response shapes checkMx reads; live answers are pinned in the
+tests. No code from either.
+
+==============================================================================
+Standards implemented (IETF): RFC 5321 (sections 2.4 and 5.1), RFC 7505,
+RFC 1035 (section 4.1.1), RFC 2308 (section 5). RFC 2606 and RFC 6761 name the
+reserved domains the test fixtures use.
+
+Reference: F. J. Damerau, "A technique for computer detection and correction
+of spelling errors", Communications of the ACM 7(3), 1964 (the edit
+operations behind optimal string alignment).

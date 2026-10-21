@@ -1,0 +1,98 @@
+{
+  "name": "mailcheck-ts",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "Catch mistyped, disposable and undeliverable email addresses without ever refusing a real one: an offline typo suggester (a mailcheck drop-in), a disposable-domain check and a DNS-over-HTTPS MX check that refuses only on definitive DNS answers. Zero runtime dependencies; browsers, Node 18+, Deno, Bun, Workers and edge runtimes.",
+  "keywords": [
+    "email",
+    "mailcheck",
+    "typo",
+    "suggestion",
+    "mx",
+    "dns-over-https",
+    "disposable"
+  ],
+  "author": "MatrisAI",
+  "homepage": "https://github.com/MatrisAi/mailcheck-ts#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MatrisAi/mailcheck-ts.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MatrisAi/mailcheck-ts/issues"
+  },
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./suggest": "./src/suggest.ts",
+    "./mx": "./src/mx.ts",
+    "./providers": "./src/providers.ts",
+    "./disposable": "./src/disposable.ts",
+    "./check": "./src/check.ts",
+    "./mailcheck": "./src/mailcheck-compat.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./suggest": {
+        "types": "./dist/suggest.d.ts",
+        "import": "./dist/suggest.js"
+      },
+      "./mx": {
+        "types": "./dist/mx.d.ts",
+        "import": "./dist/mx.js"
+      },
+      "./providers": {
+        "types": "./dist/providers.d.ts",
+        "import": "./dist/providers.js"
+      },
+      "./disposable": {
+        "types": "./dist/disposable.d.ts",
+        "import": "./dist/disposable.js"
+      },
+      "./check": {
+        "types": "./dist/check.d.ts",
+        "import": "./dist/check.js"
+      },
+      "./mailcheck": {
+        "types": "./dist/mailcheck-compat.d.ts",
+        "import": "./dist/mailcheck-compat.js"
+      }
+    },
+    "types": "./dist/index.d.ts",
+    "provenance": true,
+    "access": "public"
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/leak-scan.mjs && vitest run",
+    "build": "node scripts/build.mjs",
+    "leak-scan": "node scripts/leak-scan.mjs",
+    "pack-check": "node scripts/pack-check.mjs",
+    "prepublishOnly": "node scripts/build.mjs && node scripts/pack-check.mjs",
+    "verify-domains": "node scripts/verify-domains.mjs",
+    "update-tlds": "node scripts/update-tlds.mjs",
+    "update-disposable": "node scripts/update-disposable.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "jiti": "2.7.0",
+    "typescript": "7.0.2",
+    "vitest": "5.0.3"
+  },
+  "packageManager": "pnpm@12.11.2+sha512.25a51652a196785af5f28bda6dfe8dc582ebefa4ac1d180221ce1390231c5fb76637822ea4b6e4633ce74acdcb0a77f725af11bad38177fdeddaee818a955cb9"
+}

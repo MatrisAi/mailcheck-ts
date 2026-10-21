@@ -1,0 +1,8 @@
+# Settings only: this repository is a single package, not a workspace.
+#
+# Supply chain. A version must be a day old before it can be installed: most
+# hijacked releases are found and pulled within hours. Lifecycle scripts of
+# dependencies never run unless listed here (none are), and a new one fails
+# the install until it is reviewed.
+minimumReleaseAge: 1440
+strictDepBuilds: true

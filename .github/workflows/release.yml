@@ -1,0 +1,86 @@
+# Publishes to the npm registry with npm trusted publishing (OIDC): no npm
+# token exists anywhere, in this repository or its secrets. GitHub mints a
+# short-lived identity token for this job (`id-token: write`) and the
+# registry exchanges it for a one-time publish credential, then records a
+# provenance attestation that links the version to this commit and workflow.
+#
+# One-time setup on npmjs.com, before the first release (see CONTRIBUTING.md):
+# package settings > Trusted publishing > GitHub Actions, with this
+# repository's owner and name, workflow file `release.yml` and environment
+# `npm`. The registry refuses a publish from any other repository, workflow
+# file or environment. The registry offers these settings only once the
+# package exists, so the very first version needs a one-off bootstrap
+# (CONTRIBUTING.md, "First release").
+name: Release
+
+on:
+  release:
+    types: [published]
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+# A release created together with its tag fires both events; one run per tag.
+concurrency:
+  group: release-${{ github.event.release.tag_name || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Installs the pnpm version pinned by `packageManager` in package.json.
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      # No `registry-url`: it writes an .npmrc expecting a token, and trusted
+      # publishing uses none.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+      - run: pnpm install --frozen-lockfile
+
+      - name: Tag matches package.json version
+        id: version
+        env:
+          TAG: ${{ github.event.release.tag_name || github.ref_name }}
+        run: |
+          version="$(node -p 'require("./package.json").version')"
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::tag $TAG does not match package.json version v$version"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Skip a version already on the registry
+        id: published
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if pnpm view "mailcheck-ts@$VERSION" version >/dev/null 2>&1; then
+            echo "mailcheck-ts@$VERSION is already published; nothing to do."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.published.outputs.exists == 'false'
+        run: pnpm test
+      - if: steps.published.outputs.exists == 'false'
+        run: pnpm run typecheck
+      - if: steps.published.outputs.exists == 'false'
+        run: pnpm run build
+      - if: steps.published.outputs.exists == 'false'
+        run: pnpm run pack-check
+      # prepublishOnly rebuilds and re-runs pack-check, so the tarball that is
+      # uploaded is the one that was checked.
+      - if: steps.published.outputs.exists == 'false'
+        run: pnpm publish --provenance --access public --no-git-checks
